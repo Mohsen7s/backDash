@@ -1,4 +1,4 @@
-version: '1.0'
+version: '3.8'  #docker engine 19.03.0+
 #external ports are sum by 10000
 services:
   mongodb:
