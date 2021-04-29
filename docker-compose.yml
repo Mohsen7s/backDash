@@ -1,0 +1,65 @@
+version: '1.0'
+#external ports are sum by 10000
+services:
+  mongodb:
+    container_name: my-mongo
+    image: mongo:4.4.5
+    ports:
+      - 37017:27017
+    volumes:
+      - ./my-mongodata:/data/db
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: pZg0G44PlH
+      MONGO_INITDB_DATABASE: dev
+
+  parse:
+    container_name: my-parseserver
+    image: parseplatform/parse-server:4.5.0
+    ports:
+      - 11337:1337
+    environment:
+      # https://github.com/parse-community/parse-server/blob/master/src/Options/Definitions.js
+      - PARSE_SERVER_APPLICATION_ID=${PARSE_SERVER_APPLICATION_ID}
+      - PARSE_SERVER_MASTER_KEY=${PARSE_SERVER_MASTER_KEY}
+      # Local Mongo Docker
+      - PARSE_SERVER_DATABASE_URI=mongodb://appuser:password@mongodb:27017/dev
+      - PARSE_SERVER_JAVASCRIPT_KEY=${PARSE_SERVER_JAVASCRIPT_KEY}
+      - PARSE_SERVER_REST_API_KEY=${PARSE_SERVER_REST_API_KEY}
+      - PARSE_SERVER_LOG_LEVEL=debug
+      - PARSE_SERVER_START_LIVE_QUERY_SERVER=1
+      - PARSE_SERVER_LIVE_QUERY={"classNames":["people","monitor"]}
+      - PARSE_SERVER_CLOUD=/parse-server/cloud/main.js
+      - PARSE_SERVER_MOUNT_GRAPHQL=true
+      - PARSE_SERVER_GRAPHQL_PATH=/graphql
+      #- PARSE_SERVER_FILES_ADAPTER="@parse/s3-files-adapter"
+    command: /parse-server/config/config.js
+    depends_on:
+      - mongodb
+    volumes:
+      - './parse-server/config/config.js:/parse-server/config/config.js'
+      - './parse-server/cloud-code:/parse-server/cloud'
+
+  dashboard:
+    container_name: my-dashboard
+    image: parseplatform/parse-dashboard:latest
+    ports:
+      - 14040:4040
+    environment:
+      - PARSE_DASHBOARD_SERVER_URL=http://localhost:11337/parse
+      - PARSE_DASHBOARD_APP_ID=${PARSE_SERVER_APPLICATION_ID}
+      - PARSE_DASHBOARD_MASTER_KEY=${PARSE_SERVER_MASTER_KEY}
+      - PARSE_DASHBOARD_APP_NAME=myApp
+      - PARSE_DASHBOARD_ALLOW_INSECURE_HTTP=1
+      - PARSE_DASHBOARD_USER_ID=user
+      - PARSE_DASHBOARD_USER_PASSWORD=pass
+      - PARSE_DASHBOARD_GRAPHQL_SERVER_URL=http://localhost:11337/graphql
+    depends_on:
+      - mongodb
+      - parse
+
+
+volumes:
+  my-mongodata:
+    driver: local
